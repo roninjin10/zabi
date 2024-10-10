@@ -29,7 +29,7 @@ fn decodeItem(allocator: Allocator, comptime T: type, encoded: []const u8, posit
         return error.Overflow;
 
     switch (info) {
-        .bool => {
+        .Bool => {
             std.debug.assert(position < encoded.len); // Overflow on encoded string,
             switch (encoded[position]) {
                 0x80 => return .{ .consumed = 1, .data = false },
@@ -37,8 +37,8 @@ fn decodeItem(allocator: Allocator, comptime T: type, encoded: []const u8, posit
                 else => return error.UnexpectedValue,
             }
         },
-        .int => {
-            if (info.int.signedness == .signed)
+        .Int => {
+            if (info.Int.signedness == .signed)
                 @compileError("Signed integers are not supported for RLP decoding");
 
             std.debug.assert(position < encoded.len); // Overflow on encoded string,
@@ -56,7 +56,7 @@ fn decodeItem(allocator: Allocator, comptime T: type, encoded: []const u8, posit
 
             return .{ .consumed = len + 1, .data = if (slice.len != 0) try std.fmt.parseInt(T, slice, 16) else @intCast(0) };
         },
-        .float => {
+        .Float => {
             std.debug.assert(position < encoded.len); // Overflow on encoded string,
 
             if (encoded[position] < 0x80) return .{ .consumed = 1, .data = @as(T, @floatFromInt(encoded[position])) };
@@ -68,24 +68,24 @@ fn decodeItem(allocator: Allocator, comptime T: type, encoded: []const u8, posit
             const slice = try std.fmt.allocPrint(allocator, "{s}", .{hexed});
             defer allocator.free(slice);
 
-            const bits = info.float.bits;
-            const AsInt = @Type(.{ .int = .{ .signedness = .unsigned, .bits = bits } });
+            const bits = info.Float.bits;
+            const AsInt = @Type(.{ .Int = .{ .signedness = .unsigned, .bits = bits } });
             const parsed = try std.fmt.parseInt(AsInt, slice, 16);
             return .{ .consumed = len + 1, .data = if (slice.len != 0) @as(T, @floatFromInt(parsed)) else @floatCast(0) };
         },
-        .null => {
+        .Null => {
             std.debug.assert(position < encoded.len); // Overflow on encoded string,
             return if (encoded[position] != 0x80) error.UnexpectedValue else .{ .consumed = 1, .data = null };
         },
-        .optional => |opt_info| {
+        .Optional => |opt_info| {
             std.debug.assert(position < encoded.len); // Overflow on encoded string,
-            //
+
             if (encoded[position] == 0x80) return .{ .consumed = 1, .data = null };
 
             const opt = try decodeItem(allocator, opt_info.child, encoded, position);
             return .{ .consumed = opt.consumed, .data = opt.data };
         },
-        .@"enum", .enum_literal => {
+        .Enum, .EnumLiteral => {
             std.debug.assert(position < encoded.len); // Overflow on encoded string,
 
             const size = encoded[position];
@@ -116,7 +116,7 @@ fn decodeItem(allocator: Allocator, comptime T: type, encoded: []const u8, posit
 
             return .{ .consumed = 2 + len_size + parsed, .data = e };
         },
-        .array => |arr_info| {
+        .Array => |arr_info| {
             std.debug.assert(position < encoded.len); // Overflow on encoded string,
 
             if (arr_info.child == u8) {
@@ -184,7 +184,7 @@ fn decodeItem(allocator: Allocator, comptime T: type, encoded: []const u8, posit
 
             return .{ .consumed = arr_info.len + 1, .data = result };
         },
-        .pointer => |ptr_info| {
+        .Pointer => |ptr_info| {
             switch (ptr_info.size) {
                 .One => {
                     const res: *ptr_info.child = try allocator.create(ptr_info.child);
@@ -271,7 +271,7 @@ fn decodeItem(allocator: Allocator, comptime T: type, encoded: []const u8, posit
                 else => @compileError("Unable to parse pointer type " ++ @typeName(T)),
             }
         },
-        .vector => |vec_info| {
+        .Vector => |vec_info| {
             const arr_size = encoded[position];
 
             if (arr_size <= 0xf7) {
@@ -299,7 +299,7 @@ fn decodeItem(allocator: Allocator, comptime T: type, encoded: []const u8, posit
 
             return .{ .consumed = vec_info.len + 1, .data = result };
         },
-        .@"struct" => |struct_info| {
+        .Struct => |struct_info| {
             if (struct_info.is_tuple) {
                 const arr_size = encoded[position];
                 if (arr_size <= 0xf7) {

@@ -60,136 +60,110 @@ pub const Tokenizer = struct {
     }
     /// Advances the tokenizer's state and produces a single token.
     pub fn next(self: *Tokenizer) Token {
+        var state: State = .start;
         var result: Token = .{ .token = undefined, .location = .{
             .start = self.index,
             .end = undefined,
         } };
-
-        state: switch (State.start) {
-            .start => switch (self.buffer[self.index]) {
-                0 => {
-                    if (self.index == self.buffer.len)
-                        return .{ .token = .eof, .location = .{
-                            .start = self.index,
-                            .end = self.index,
-                        } }
-                    else
-                        continue :state .invalid;
+        while (true) : (self.index += 1) {
+            const char = self.buffer[self.index];
+            switch (state) {
+                .start => switch (char) {
+                    0 => {
+                        if (self.index == self.buffer.len)
+                            return .{ .token = .eof, .location = .{
+                                .start = self.index,
+                                .end = self.index,
+                            } };
+                    },
+                    ' ',
+                    '\n',
+                    '\t',
+                    '\r',
+                    '"',
+                    => result.location.start += 1,
+                    'a'...'z',
+                    'A'...'Z',
+                    '_',
+                    => {
+                        state = .identifier;
+                        result.token = .identifier;
+                    },
+                    '=' => {
+                        state = .assignment;
+                        result.location.start += 1;
+                    },
+                    else => state = .invalid,
                 },
-                ' ',
-                '\n',
-                '\t',
-                '\r',
-                '"',
-                => {
-                    self.index += 1;
-                    result.location.start += 1;
-                    continue :state .start;
-                },
-                'a'...'z',
-                'A'...'Z',
-                '_',
-                => {
-                    result.token = .identifier;
-                    self.index += 1;
-                    continue :state .identifier;
-                },
-                '=' => {
-                    self.index += 1;
-                    result.location.start += 1;
-                    continue :state .assignment;
-                },
-                else => {
-                    self.index += 1;
-                    continue :state .invalid;
-                },
-            },
-            .invalid => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
+                .invalid => switch (char) {
                     0 => if (self.index == self.buffer.len) {
                         result.token = .invalid;
+                        break;
                     },
-                    '\n' => result.token = .invalid,
-                    else => continue :state .invalid,
-                }
-            },
-            .identifier => switch (self.buffer[self.index]) {
-                'a'...'z',
-                'A'...'Z',
-                '_',
-                '0'...'9',
-                => {
-                    self.index += 1;
-                    continue :state .identifier;
+                    '\n' => {
+                        result.token = .invalid;
+                        break;
+                    },
+                    else => continue,
                 },
-                else => {},
-            },
-            .assignment => switch (self.buffer[self.index]) {
-                0 => {
-                    if (self.index == self.buffer.len) {
-                        return .{ .token = .invalid, .location = .{
-                            .start = self.index,
-                            .end = self.index,
-                        } };
-                    } else continue :state .invalid;
+                .identifier => switch (char) {
+                    'a'...'z',
+                    'A'...'Z',
+                    '_',
+                    '0'...'9',
+                    => continue,
+                    else => break,
                 },
-                '\'',
-                '"',
-                ' ',
-                => {
-                    self.index += 1;
-                    result.location.start += 1;
-                    continue :state .assignment;
+                .assignment => switch (char) {
+                    0 => {
+                        if (self.index == self.buffer.len)
+                            return .{ .token = .invalid, .location = .{
+                                .start = self.index,
+                                .end = self.index,
+                            } };
+                    },
+                    '\'',
+                    '"',
+                    ' ',
+                    => result.location.start += 1,
+                    '\n',
+                    '\r',
+                    '\t',
+                    => {
+                        result.token = .invalid;
+                        state = .invalid;
+                    },
+                    '0'...'9' => {
+                        result.token = .value_int;
+                        state = .value_int;
+                    },
+                    else => {
+                        result.token = .value;
+                        state = .value;
+                    },
                 },
-                '\n',
-                '\r',
-                '\t',
-                => {
-                    result.token = .invalid;
-                    continue :state .invalid;
+                .value_int => switch (char) {
+                    '0'...'9' => continue,
+                    else => break,
                 },
-                '0'...'9' => {
-                    self.index += 1;
-                    result.token = .value_int;
-                    continue :state .value_int;
+                .value => switch (char) {
+                    0,
+                    '\'',
+                    '"',
+                    => break,
+                    '\n',
+                    '\r',
+                    '\t',
+                    ' ',
+                    => {
+                        result.token = .invalid;
+                        state = .invalid;
+                    },
+                    else => if (std.ascii.isASCII(char)) continue else break,
                 },
-                else => {
-                    self.index += 1;
-                    result.token = .value;
-                    continue :state .value;
-                },
-            },
-            .value_int => switch (self.buffer[self.index]) {
-                '0'...'9' => {
-                    self.index += 1;
-                    continue :state .value_int;
-                },
-                else => {},
-            },
-            .value => switch (self.buffer[self.index]) {
-                0,
-                '\'',
-                '"',
-                => {},
-                '\n',
-                '\r',
-                '\t',
-                ' ',
-                => {
-                    self.index += 1;
-                    result.token = .invalid;
-                    continue :state .invalid;
-                },
-                else => if (std.ascii.isAscii(self.buffer[self.index])) {
-                    self.index += 1;
-                    continue :state .value;
-                },
-            },
+            }
         }
-
         result.location.end = self.index;
-
         return result;
     }
 };

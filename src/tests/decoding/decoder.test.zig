@@ -134,23 +134,23 @@ fn testInnerValues(expected: anytype, actual: anytype) !void {
     }
 
     const info = @typeInfo(@TypeOf(expected));
-    if (info == .pointer) {
-        if (@typeInfo(info.pointer.child) == .@"struct") return try testInnerValues(expected[0], actual[0]);
+    if (info == .Pointer) {
+        if (@typeInfo(info.Pointer.child) == .Struct) return try testInnerValues(expected[0], actual[0]);
 
         for (expected, actual) |e, a| {
             try testInnerValues(e, a);
         }
         return;
     }
-    if (info == .array) {
+    if (info == .Array) {
         for (expected, actual) |e, a| {
             try testInnerValues(e, a);
         }
         return;
     }
 
-    if (info == .@"struct") {
-        inline for (info.@"struct".fields) |field| {
+    if (info == .Struct) {
+        inline for (info.Struct.fields) |field| {
             try testInnerValues(@field(expected, field.name), @field(actual, field.name));
         }
         return;

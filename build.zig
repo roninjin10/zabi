@@ -2,14 +2,14 @@ const env_parser = @import("src/utils/env_load.zig");
 const std = @import("std");
 const builtin = @import("builtin");
 
-const min_zig_string = "0.14.0-dev.1573+4d81e8ee9";
+const min_zig_string = "0.13.0";
 
 pub fn build(b: *std.Build) void {
     comptime {
         const current_zig = builtin.zig_version;
         const min_zig = std.SemanticVersion.parse(min_zig_string) catch unreachable;
-        if (current_zig.order(min_zig) == .lt) {
-            @compileError(std.fmt.comptimePrint("Your Zig version v{} does not meet the minimum build requirement of v{}", .{ current_zig, min_zig }));
+        if (current_zig.order(min_zig) != .eq) {
+            @compileError(std.fmt.comptimePrint("Your Zig version v{} does not meet the build requirement of v{}", .{ current_zig, min_zig }));
         }
     }
 

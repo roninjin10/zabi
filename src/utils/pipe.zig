@@ -30,7 +30,7 @@ pub fn maybeIgnoreSigpipe() void {
             .mask = posix.empty_sigset,
             .flags = 0,
         };
-        posix.sigaction(posix.SIG.PIPE, &act, null);
+        posix.sigaction(posix.SIG.PIPE, &act, null) catch unreachable;
     }
 }
 

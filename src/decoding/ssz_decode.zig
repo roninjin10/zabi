@@ -18,9 +18,9 @@ pub fn decodeSSZ(comptime T: type, serialized: []const u8) SSZDecodeErrors!T {
     const info = @typeInfo(T);
 
     switch (info) {
-        .bool => return serialized[0] != 0,
-        .int => |int_info| return std.mem.readInt(T, serialized[0..@divExact(int_info.bits, 8)], .little),
-        .optional => |opt_info| {
+        .Bool => return serialized[0] != 0,
+        .Int => |int_info| return std.mem.readInt(T, serialized[0..@divExact(int_info.bits, 8)], .little),
+        .Optional => |opt_info| {
             const index = serialized[0];
 
             if (index != 0) {
@@ -28,12 +28,12 @@ pub fn decodeSSZ(comptime T: type, serialized: []const u8) SSZDecodeErrors!T {
                 return result;
             } else return null;
         },
-        .@"enum" => {
+        .Enum => {
             const to_enum = std.meta.stringToEnum(T, serialized[0..]) orelse return error.InvalidEnumType;
 
             return to_enum;
         },
-        .array => |arr_info| {
+        .Array => |arr_info| {
             if (arr_info.child == u8) {
                 return serialized[0..];
             }
@@ -80,7 +80,7 @@ pub fn decodeSSZ(comptime T: type, serialized: []const u8) SSZDecodeErrors!T {
 
             return result;
         },
-        .vector => |vec_info| {
+        .Vector => |vec_info| {
             var result: T = undefined;
 
             if (vec_info.child == bool) {
@@ -105,21 +105,21 @@ pub fn decodeSSZ(comptime T: type, serialized: []const u8) SSZDecodeErrors!T {
 
             return result;
         },
-        .pointer => return serialized[0..],
-        .@"union" => |union_info| {
+        .Pointer => return serialized[0..],
+        .Union => |union_info| {
             const union_index = try decodeSSZ(u8, serialized);
 
             inline for (union_info.fields, 0..) |field, i| {
                 if (union_index == i) {
                     return @unionInit(T, field.name, try decodeSSZ(field.type, serialized[1..]));
                 }
-            }
+            } else return error.InvalidEnumType;
         },
-        .@"struct" => |struct_info| {
+        .Struct => |struct_info| {
             comptime var num_fields = 0;
             inline for (struct_info.fields) |field| {
                 switch (@typeInfo(field.type)) {
-                    .bool, .int => continue,
+                    .Bool, .Int => continue,
                     else => num_fields += 1,
                 }
             }
@@ -131,7 +131,7 @@ pub fn decodeSSZ(comptime T: type, serialized: []const u8) SSZDecodeErrors!T {
             comptime var field_index = 0;
             inline for (struct_info.fields) |field| {
                 switch (@typeInfo(field.type)) {
-                    .bool, .int => {
+                    .Bool, .Int => {
                         @field(result, field.name) = try decodeSSZ(field.type, serialized[index .. index + @sizeOf(field.type)]);
                         index += @sizeOf(field.type);
                     },
@@ -146,7 +146,7 @@ pub fn decodeSSZ(comptime T: type, serialized: []const u8) SSZDecodeErrors!T {
             comptime var final_index = 0;
             inline for (struct_info.fields) |field| {
                 switch (@typeInfo(field.type)) {
-                    .bool, .int => continue,
+                    .Bool, .Int => continue,
                     else => {
                         const final = if (final_index == indices.len - 1) serialized.len else indices[final_index + 1];
                         @field(result, field.name) = try decodeSSZ(field.type, serialized[indices[final_index]..final]);
@@ -159,7 +159,4 @@ pub fn decodeSSZ(comptime T: type, serialized: []const u8) SSZDecodeErrors!T {
         },
         else => @compileError("Unsupported type " ++ @typeName(T)),
     }
-
-    // it should never be reached
-    unreachable;
 }

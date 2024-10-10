@@ -37,7 +37,7 @@ fn invoke(comptime func: anytype, args: anytype) void {
             };
             const info = @typeInfo(@TypeOf(item));
 
-            if (info != .@"struct")
+            if (info != .Struct)
                 return;
 
             if (@hasDecl(@TypeOf(item), "deinit")) item.deinit();
@@ -46,7 +46,7 @@ fn invoke(comptime func: anytype, args: anytype) void {
             const item = @call(.never_inline, func, args);
             const info = @typeInfo(@TypeOf(item));
 
-            if (info != .@"struct")
+            if (info != .Struct)
                 return;
 
             if (@hasDecl(@TypeOf(item), "deinit")) item.deinit();

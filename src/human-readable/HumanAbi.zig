@@ -48,7 +48,7 @@ pub fn parse(arena: Allocator, source: [:0]const u8) Errors!Abi {
     var abi_gen: HumanAbi = .{
         .allocator = arena,
         .ast = &ast,
-        .struct_params = .empty,
+        .struct_params = .{},
     };
     defer abi_gen.struct_params.deinit(arena);
 

@@ -3460,7 +3460,7 @@ fn unreserveNode(self: *Parser, index: usize) void {
 }
 /// Appends an error to the `errors` arraylist. Continue with parsing.
 fn warn(self: *Parser, fail_tag: Ast.Error.Tag) Allocator.Error!void {
-    @branchHint(.cold);
+    @setCold(true);
 
     try self.warnMessage(.{
         .tag = fail_tag,
@@ -3469,7 +3469,7 @@ fn warn(self: *Parser, fail_tag: Ast.Error.Tag) Allocator.Error!void {
 }
 /// Appends an error to the `errors` arraylist. Continue with parsing.
 fn warnMessage(self: *Parser, message: Ast.Error) Allocator.Error!void {
-    @branchHint(.cold);
+    @setCold(true);
 
     switch (message.tag) {
         .expected_semicolon,
@@ -3511,7 +3511,7 @@ fn warnMessage(self: *Parser, message: Ast.Error) Allocator.Error!void {
 }
 /// Appends an error to the `errors` arraylist and returns the error.
 fn fail(self: *Parser, fail_tag: Ast.Error.Tag) ParserErrors {
-    @branchHint(.cold);
+    @setCold(true);
 
     return self.failMsg(.{
         .tag = fail_tag,
@@ -3520,7 +3520,7 @@ fn fail(self: *Parser, fail_tag: Ast.Error.Tag) ParserErrors {
 }
 /// Appends an error to the `errors` arraylist and returns the error.
 fn failMsg(self: *Parser, message: Ast.Error) ParserErrors {
-    @branchHint(.cold);
+    @setCold(true);
     try self.warnMessage(message);
 
     return error.ParsingError;

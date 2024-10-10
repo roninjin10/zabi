@@ -37,7 +37,7 @@ pub fn jsonParseFromValue(comptime T: type, allocator: Allocator, source: Value,
     while (iter.next()) |token| {
         const field_name = token.key_ptr.*;
 
-        inline for (info.@"struct".fields) |field| {
+        inline for (info.Struct.fields) |field| {
             if (std.mem.eql(u8, field.name, field_name)) {
                 if (@field(seen, field.name) == 1) {
                     switch (options.duplicate_field_behavior) {
@@ -60,7 +60,7 @@ pub fn jsonParseFromValue(comptime T: type, allocator: Allocator, source: Value,
         }
     }
 
-    inline for (info.@"struct".fields) |field| {
+    inline for (info.Struct.fields) |field| {
         switch (@field(seen, field.name)) {
             0 => if (field.default_value) |default_value| {
                 @field(result, field.name) = @as(*const field.type, @ptrCast(@alignCast(default_value))).*;
@@ -92,9 +92,9 @@ pub fn jsonStringify(comptime T: type, self: T, writer_stream: anytype) @TypeOf(
 
     try writer_stream.stream.writeByte('{');
     writer_stream.next_punctuation = .the_beginning;
-    inline for (info.@"struct".fields) |field| {
+    inline for (info.Struct.fields) |field| {
         var emit_field = true;
-        if (@typeInfo(field.type) == .optional) {
+        if (@typeInfo(field.type) == .Optional) {
             if (@field(self, field.name) == null and !writer_stream.options.emit_null_optional_fields) {
                 emit_field = false;
             }
@@ -124,13 +124,13 @@ pub fn innerParseValueRequest(comptime T: type, allocator: Allocator, source: Va
     const info = @typeInfo(T);
 
     switch (info) {
-        .bool => {
+        .Bool => {
             switch (source) {
                 .string => |val| return try std.fmt.parseInt(u1, val, 0) != 0,
                 else => return std.json.innerParseFromValue(T, allocator, source, options),
             }
         },
-        .int, .comptime_int => {
+        .Int, .ComptimeInt => {
             switch (source) {
                 .number_string, .string => |str| {
                     if (std.mem.eql(u8, str, "0x"))
@@ -144,13 +144,13 @@ pub fn innerParseValueRequest(comptime T: type, allocator: Allocator, source: Va
                 else => return error.UnexpectedToken,
             }
         },
-        .optional => |opt_info| {
+        .Optional => |opt_info| {
             switch (source) {
                 .null => return null,
                 else => return try innerParseValueRequest(opt_info.child, allocator, source, options),
             }
         },
-        .@"enum" => |enum_info| {
+        .Enum => |enum_info| {
             switch (source) {
                 .number_string, .string => |slice| {
                     if (std.meta.stringToEnum(T, slice)) |result| return result;
@@ -161,7 +161,7 @@ pub fn innerParseValueRequest(comptime T: type, allocator: Allocator, source: Va
                 else => return std.json.innerParseFromValue(T, allocator, source, options),
             }
         },
-        .array => |arr_info| {
+        .Array => |arr_info| {
             switch (source) {
                 .array => |arr| {
                     var result: T = undefined;
@@ -194,7 +194,7 @@ pub fn innerParseValueRequest(comptime T: type, allocator: Allocator, source: Va
                 else => return std.json.innerParseFromValue(T, allocator, source, options),
             }
         },
-        .pointer => |ptr_info| {
+        .Pointer => |ptr_info| {
             switch (ptr_info.size) {
                 .One => {
                     const result: *ptr_info.child = try allocator.create(ptr_info.child);
@@ -242,44 +242,44 @@ pub fn innerStringify(value: anytype, stream_writer: anytype) !void {
     const info = @typeInfo(@TypeOf(value));
 
     switch (info) {
-        .bool => {
+        .Bool => {
             try valueStart(stream_writer);
             try stream_writer.stream.writeAll(if (value) "true" else "false");
             stream_writer.next_punctuation = .comma;
         },
-        .int, .comptime_int => {
+        .Int, .ComptimeInt => {
             try valueStart(stream_writer);
             try stream_writer.stream.writeByte('\"');
             try stream_writer.stream.print("0x{x}", .{value});
             try stream_writer.stream.writeByte('\"');
             stream_writer.next_punctuation = .comma;
         },
-        .float, .comptime_float => {
+        .Float, .ComptimeFloat => {
             try valueStart(stream_writer);
             try stream_writer.stream.print("{d}", .{value});
             stream_writer.next_punctuation = .comma;
         },
-        .null => {
+        .Null => {
             try valueStart(stream_writer);
             try stream_writer.stream.writeAll("null");
             stream_writer.next_punctuation = .comma;
         },
-        .optional => {
+        .Optional => {
             if (value) |val| {
                 return try innerStringify(val, stream_writer);
             } else return try innerStringify(null, stream_writer);
         },
-        .@"enum", .enum_literal => {
+        .Enum, .EnumLiteral => {
             try valueStart(stream_writer);
             try std.json.encodeJsonString(@tagName(value), .{}, stream_writer.stream);
             stream_writer.next_punctuation = .comma;
         },
-        .error_set => {
+        .ErrorSet => {
             try valueStart(stream_writer);
             try std.json.encodeJsonString(@errorName(value), .{}, stream_writer.stream);
             stream_writer.next_punctuation = .comma;
         },
-        .array => |arr_info| {
+        .Array => |arr_info| {
             try valueStart(stream_writer);
             // We assume that we are dealying with hex bytes.
             // Mostly usefull for the cases of wanting to hex addresses and hashes
@@ -325,10 +325,10 @@ pub fn innerStringify(value: anytype, stream_writer: anytype) !void {
                 return try innerStringify(&value, stream_writer);
             }
         },
-        .pointer => |ptr_info| {
+        .Pointer => |ptr_info| {
             switch (ptr_info.size) {
                 .One => switch (@typeInfo(ptr_info.child)) {
-                    .array => {
+                    .Array => {
                         const Slice = []const std.meta.Elem(ptr_info.child);
                         return innerStringify(@as(Slice, value), stream_writer);
                     },
@@ -383,7 +383,7 @@ pub fn innerStringify(value: anytype, stream_writer: anytype) !void {
                 else => @compileError("Unsupported pointer type " ++ @typeName(@TypeOf(value))),
             }
         },
-        .@"struct" => |struct_info| {
+        .Struct => |struct_info| {
             if (struct_info.is_tuple) {
                 try valueStart(stream_writer);
                 try stream_writer.stream.writeByte('[');
@@ -411,7 +411,7 @@ pub fn innerStringify(value: anytype, stream_writer: anytype) !void {
                     @compileError("Unable to parse structs without jsonStringify custom declaration. TypeName: " ++ @typeName(@TypeOf(value)));
             }
         },
-        .@"union" => {
+        .Union => {
             if (@hasDecl(@TypeOf(value), "jsonStringify"))
                 return value.jsonStringify(stream_writer)
             else

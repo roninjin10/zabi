@@ -234,7 +234,7 @@ fn decodeParameter(comptime T: type, allocator: Allocator, encoded: []u8, positi
     const info = @typeInfo(T);
 
     switch (info) {
-        .bool => {
+        .Bool => {
             const bit = encoded[position + 31];
 
             if (bit > 1)
@@ -246,7 +246,7 @@ fn decodeParameter(comptime T: type, allocator: Allocator, encoded: []u8, positi
                 .bytes_read = 32,
             };
         },
-        .int => |int_info| {
+        .Int => |int_info| {
             const bytes = encoded[position .. position + 32];
 
             const number = switch (int_info.signedness) {
@@ -260,8 +260,8 @@ fn decodeParameter(comptime T: type, allocator: Allocator, encoded: []u8, positi
                 .bytes_read = 32,
             };
         },
-        .optional => |opt_info| return decodeParameter(opt_info.child, allocator, encoded, position, options),
-        .@"enum" => {
+        .Optional => |opt_info| return decodeParameter(opt_info.child, allocator, encoded, position, options),
+        .Enum => {
             const offset: usize = @truncate(std.mem.readInt(u256, @ptrCast(encoded[position .. position + 32]), .big));
             const length: usize = @truncate(std.mem.readInt(u256, @ptrCast(encoded[offset .. offset + 32]), .big));
 
@@ -275,12 +275,12 @@ fn decodeParameter(comptime T: type, allocator: Allocator, encoded: []u8, positi
                 .bytes_read = @intCast(padded + 64),
             };
         },
-        .array => |arr_info| {
+        .Array => |arr_info| {
             if (arr_info.child == u8) {
                 if (arr_info.len > 32)
                     @compileError("Invalid u8 array length. Expected lower than or equal to 32");
 
-                const AsInt = @Type(.{ .int = .{ .signedness = .unsigned, .bits = arr_info.len * 8 } });
+                const AsInt = @Type(.{ .Int = .{ .signedness = .unsigned, .bits = arr_info.len * 8 } });
 
                 const slice = encoded[position .. position + 32];
                 var result: T = undefined;
@@ -342,7 +342,7 @@ fn decodeParameter(comptime T: type, allocator: Allocator, encoded: []u8, positi
                 .bytes_read = read,
             };
         },
-        .pointer => |ptr_info| {
+        .Pointer => |ptr_info| {
             switch (ptr_info.size) {
                 .One => {
                     const value = try allocator.create(ptr_info.child);
@@ -405,7 +405,7 @@ fn decodeParameter(comptime T: type, allocator: Allocator, encoded: []u8, positi
                 else => @compileError("Unsupported pointer type " ++ @typeName(T)),
             }
         },
-        .@"struct" => |struct_info| {
+        .Struct => |struct_info| {
             var result: T = undefined;
 
             var pos: usize = 0;

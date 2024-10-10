@@ -51,7 +51,7 @@ pub fn parseSource(self: *Parser) ParserErrors!void {
     const members = try self.parseUnits();
 
     if (self.token_tags[self.token_index] != .EndOfFileToken) {
-        @branchHint(.cold);
+        @setCold(true);
         return error.ParsingError;
     }
 
@@ -85,7 +85,7 @@ pub fn expectUnit(self: *Parser) ParserErrors!Node.Index {
     const unit = try self.parseUnit();
 
     if (unit == 0) {
-        @branchHint(.cold);
+        @setCold(true);
         return error.ParsingError;
     }
 
@@ -290,7 +290,7 @@ pub fn parseSpecifiers(self: *Parser) ParserErrors!Node.Index {
                     .seen_visibility,
                     .seen_both,
                     => {
-                        @branchHint(.cold);
+                        @setCold(true);
                         return error.ParsingError;
                     },
                     .seen_mutability => specifier = .seen_both,
@@ -307,7 +307,7 @@ pub fn parseSpecifiers(self: *Parser) ParserErrors!Node.Index {
                     .seen_mutability,
                     .seen_both,
                     => {
-                        @branchHint(.cold);
+                        @setCold(true);
                         return error.ParsingError;
                     },
                     .seen_visibility => specifier = .seen_both,
@@ -414,7 +414,7 @@ pub fn parseEventVarDecls(self: *Parser) ParserErrors!Span {
         switch (self.token_tags[self.token_index]) {
             .Comma => {
                 if (self.token_tags[self.token_index + 1] == .ClosingParen) {
-                    @branchHint(.cold);
+                    @setCold(true);
                     return error.ParsingError;
                 }
                 self.token_index += 1;
@@ -424,7 +424,7 @@ pub fn parseEventVarDecls(self: *Parser) ParserErrors!Span {
                 break;
             },
             else => {
-                @branchHint(.cold);
+                @setCold(true);
                 return error.ParsingError;
             },
         }
@@ -452,7 +452,7 @@ pub fn parseErrorVarDecls(self: *Parser) ParserErrors!Span {
         switch (self.token_tags[self.token_index]) {
             .Comma => {
                 if (self.token_tags[self.token_index + 1] == .ClosingParen) {
-                    @branchHint(.cold);
+                    @setCold(true);
                     return error.ParsingError;
                 }
                 self.token_index += 1;
@@ -462,7 +462,7 @@ pub fn parseErrorVarDecls(self: *Parser) ParserErrors!Span {
                 break;
             },
             else => {
-                @branchHint(.cold);
+                @setCold(true);
                 return error.ParsingError;
             },
         }
@@ -490,7 +490,7 @@ pub fn parseReturnParams(self: *Parser) ParserErrors!Node.Range {
         switch (self.token_tags[self.token_index]) {
             .Comma => {
                 if (self.token_tags[self.token_index + 1] == .ClosingParen) {
-                    @branchHint(.cold);
+                    @setCold(true);
                     return error.ParsingError;
                 }
                 self.token_index += 1;
@@ -500,7 +500,7 @@ pub fn parseReturnParams(self: *Parser) ParserErrors!Node.Range {
                 break;
             },
             else => {
-                @branchHint(.cold);
+                @setCold(true);
                 return error.ParsingError;
             },
         }
@@ -509,7 +509,7 @@ pub fn parseReturnParams(self: *Parser) ParserErrors!Node.Range {
     const slice = self.scratch.items[scratch..];
 
     if (slice.len == 0) {
-        @branchHint(.cold);
+        @setCold(true);
         return error.ParsingError;
     }
 
@@ -529,7 +529,7 @@ pub fn parseVariableDecls(self: *Parser) ParserErrors!Span {
         switch (self.token_tags[self.token_index]) {
             .Comma => {
                 if (self.token_tags[self.token_index + 1] == .ClosingParen) {
-                    @branchHint(.cold);
+                    @setCold(true);
                     return error.ParsingError;
                 }
                 self.token_index += 1;
@@ -539,7 +539,7 @@ pub fn parseVariableDecls(self: *Parser) ParserErrors!Span {
                 break;
             },
             else => {
-                @branchHint(.cold);
+                @setCold(true);
                 return error.ParsingError;
             },
         }
@@ -558,7 +558,7 @@ pub fn expectErrorVarDecl(self: *Parser) ParserErrors!Node.Index {
     const index = try self.parseErrorVarDecl();
 
     if (index == 0) {
-        @branchHint(.cold);
+        @setCold(true);
         return error.ParsingError;
     }
 
@@ -587,7 +587,7 @@ pub fn expectEventVarDecl(self: *Parser) ParserErrors!Node.Index {
     const index = try self.parseEventVarDecl();
 
     if (index == 0) {
-        @branchHint(.cold);
+        @setCold(true);
         return error.ParsingError;
     }
 
@@ -622,7 +622,7 @@ pub fn expectVarDecl(self: *Parser) ParserErrors!Node.Index {
     const index = try self.parseVariableDecl();
 
     if (index == 0) {
-        @branchHint(.cold);
+        @setCold(true);
         return error.ParsingError;
     }
 
@@ -735,7 +735,7 @@ pub fn expectType(self: *Parser) ParserErrors!Node.Index {
     const index = try self.parseType();
 
     if (index == 0) {
-        @branchHint(.cold);
+        @setCold(true);
         return error.ParsingError;
     }
 
@@ -775,7 +775,7 @@ pub fn parseType(self: *Parser) ParserErrors!Node.Index {
                 break self.nextToken();
             },
             else => {
-                @branchHint(.cold);
+                @setCold(true);
                 return error.ParsingError;
             },
         }
@@ -941,7 +941,7 @@ fn consumeToken(self: *Parser, expected: TokenTag) ?TokenIndex {
 /// Expects to find a token or fails.
 fn expectToken(self: *Parser, expected: TokenTag) error{ParsingError}!TokenIndex {
     return if (self.token_tags[self.token_index] == expected) self.nextToken() else {
-        @branchHint(.cold);
+        @setCold(true);
         return error.ParsingError;
     };
 }

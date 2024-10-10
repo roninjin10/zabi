@@ -77,7 +77,7 @@ pub fn MulticallArguments(comptime targets: []const MulticallTargets) type {
         };
     }
     return @Type(.{
-        .@"struct" = .{
+        .Struct = .{
             .layout = .auto,
             .fields = &fields,
             .decls = &.{},

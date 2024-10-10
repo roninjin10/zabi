@@ -813,479 +813,532 @@ pub const Tokenizer = struct {
             },
         };
 
-        state: switch (State.start) {
-            .start => switch (self.buffer[self.index]) {
-                0 => {
-                    if (self.index == self.buffer.len)
-                        return .{ .tag = .eof, .location = .{
-                            .start = self.index,
-                            .end = self.index,
-                        } }
-                    else
-                        continue :state .invalid;
-                },
-                ' ', '\n', '\r', '\t' => {
-                    result.location.start += 1;
-                    self.index += 1;
-                    continue :state .start;
-                },
-                '"' => {
-                    result.tag = .string_literal;
-                    continue :state .string_literal;
-                },
-                'a'...'z', 'A'...'Z', '_', '$' => {
-                    result.tag = .identifier;
-                    continue :state .identifier;
-                },
-                '0'...'9' => {
-                    result.tag = .number_literal;
-                    self.index += 1;
-                    continue :state .int;
-                },
-                '=' => continue :state .equal,
-                '*' => continue :state .asterisk,
-                '/' => continue :state .slash,
-                '-' => continue :state .minus,
-                '+' => continue :state .plus,
-                '&' => continue :state .ampersand,
-                '|' => continue :state .pipe,
-                '!' => continue :state .bang,
-                '%' => continue :state .percent,
-                '^' => continue :state .caret,
-                '<' => continue :state .angle_bracket_left,
-                '>' => continue :state .angle_bracket_right,
-                ':' => continue :state .colon,
-                '(' => {
-                    result.tag = .l_paren;
-                    self.index += 1;
-                },
-                ')' => {
-                    result.tag = .r_paren;
-                    self.index += 1;
-                },
-                '[' => {
-                    result.tag = .l_bracket;
-                    self.index += 1;
-                },
-                ']' => {
-                    result.tag = .r_bracket;
-                    self.index += 1;
-                },
-                '{' => {
-                    result.tag = .l_brace;
-                    self.index += 1;
-                },
-                '}' => {
-                    result.tag = .r_brace;
-                    self.index += 1;
-                },
-                ';' => {
-                    result.tag = .semicolon;
-                    self.index += 1;
-                },
-                ',' => {
-                    result.tag = .comma;
-                    self.index += 1;
-                },
-                '?' => {
-                    result.tag = .question_mark;
-                    self.index += 1;
-                },
-                '.' => {
-                    result.tag = .period;
-                    self.index += 1;
-                },
-                '~' => {
-                    result.tag = .tilde;
-                    self.index += 1;
-                },
-                else => continue :state .invalid,
-            },
-            .invalid => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    0 => if (self.index == self.buffer.len) {
-                        result.tag = .invalid;
-                    },
-                    '\n' => result.tag = .invalid,
-                    else => continue :state .invalid,
-                }
-            },
-            .colon => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '=' => {
-                        result.tag = .colon_equal;
-                        self.index += 1;
-                    },
-                    else => result.tag = .colon,
-                }
-            },
-            .ampersand => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '=' => {
-                        result.tag = .ampersand_equal;
-                        self.index += 1;
-                    },
-                    '&' => {
-                        result.tag = .ampersand_ampersand;
-                        self.index += 1;
-                    },
-                    else => result.tag = .ampersand,
-                }
-            },
-            .asterisk => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '=' => {
-                        result.tag = .asterisk_equal;
-                        self.index += 1;
-                    },
-                    '/' => {
-                        result.tag = .doc_comment;
-                        continue :state .doc_comment;
-                    },
-                    '*' => {
-                        result.tag = .asterisk_asterisk;
-                        self.index += 1;
-                    },
-                    else => result.tag = .asterisk,
-                }
-            },
-            .bang => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '=' => {
-                        result.tag = .bang_equal;
-                        self.index += 1;
-                    },
-                    else => result.tag = .bang,
-                }
-            },
-            .caret => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '=' => {
-                        result.tag = .caret_equal;
-                        self.index += 1;
-                    },
-                    else => result.tag = .caret,
-                }
-            },
-            .percent => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '=' => {
-                        result.tag = .percent_equal;
-                        self.index += 1;
-                    },
-                    else => result.tag = .percent,
-                }
-            },
-            .pipe => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '|' => {
-                        result.tag = .pipe_pipe;
-                        self.index += 1;
-                    },
-                    '=' => {
-                        result.tag = .pipe_equal;
-                        self.index += 1;
-                    },
-                    else => result.tag = .pipe,
-                }
-            },
-            .minus => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '-' => {
-                        result.tag = .minus_minus;
-                        self.index += 1;
-                    },
-                    '=' => {
-                        result.tag = .minus_equal;
-                        self.index += 1;
-                    },
-                    '>' => {
-                        result.tag = .arrow;
-                        self.index += 1;
-                    },
-                    else => result.tag = .minus,
-                }
-            },
-            .plus => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '+' => {
-                        result.tag = .plus_plus;
-                        self.index += 1;
-                    },
-                    '=' => {
-                        result.tag = .plus_equal;
-                        self.index += 1;
-                    },
-                    else => result.tag = .plus,
-                }
-            },
-            .slash => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '=' => {
-                        result.tag = .slash_equal;
-                        self.index += 1;
-                    },
-                    '/' => continue :state .line_comment_start,
-                    '*' => continue :state .doc_comment_container_start,
-                    else => result.tag = .slash,
-                }
-            },
-            .line_comment_start => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '\r' => continue :state .expect_newline,
-                    '\n' => {
-                        result.location.start = self.index + 1;
-                        continue :state .start;
-                    },
-                    0x01...0x09, 0x0b...0x0c, 0x0e...0x1f, 0x7f => continue :state .invalid,
-                    '/' => continue :state .doc_comment_start,
-                    else => continue :state .line_comment,
-                }
-            },
-            .line_comment => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    0 => {
-                        if (self.index != self.buffer.len)
-                            continue :state .invalid;
+        var state: State = .start;
 
-                        return .{
-                            .tag = .eof,
-                            .location = .{
-                                .start = self.index,
-                                .end = self.index,
-                            },
-                        };
-                    },
-                    '\r' => continue :state .expect_newline,
-                    '\n' => {
-                        result.location.start = self.index;
-                        continue :state .start;
-                    },
-                    0x01...0x09, 0x0b...0x0c, 0x0e...0x1f, 0x7f => continue :state .invalid,
-                    else => continue :state .line_comment,
-                }
-            },
-            .doc_comment_container_start => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    0 => result.tag = .doc_comment_container,
-                    0x01...0x09, 0x0b...0x0c, 0x0e...0x1f, 0x7f => continue :state .invalid,
-                    else => {
-                        result.tag = .doc_comment_container;
-                        continue :state .doc_comment_container;
-                    },
-                }
-            },
-            .doc_comment_start => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    0, '\n' => result.tag = .doc_comment,
-                    '\r' => {
-                        if (self.buffer[self.index + 1] == '\n') {
-                            result.tag = .doc_comment;
-                        } else {
-                            continue :state .invalid;
-                        }
-                    },
-                    '/' => continue :state .line_comment,
-                    0x01...0x09, 0x0b...0x0c, 0x0e...0x1f, 0x7f => {
-                        continue :state .invalid;
-                    },
-                    else => {
-                        result.tag = .doc_comment;
-                        continue :state .doc_comment;
-                    },
-                }
-            },
-            .doc_comment_container => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    0 => result.tag = .doc_comment_container,
-                    '*' => {
-                        if (self.buffer[self.index + 1] == '/') {
-                            self.index += 2;
-                        } else continue :state .doc_comment_container;
-                    },
-                    0x01...0x09, 0x0b...0x0c, 0x0e...0x1f, 0x7f => continue :state .invalid,
-                    else => continue :state .doc_comment_container,
-                }
-            },
-            .doc_comment => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    0, '\n' => {},
-                    '\r' => if (self.buffer[self.index + 1] != '\n') {
-                        continue :state .invalid;
-                    },
-                    0x01...0x09, 0x0b...0x0c, 0x0e...0x1f, 0x7f => {
-                        continue :state .invalid;
-                    },
-                    else => continue :state .doc_comment,
-                }
-            },
-            .equal => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '=' => {
-                        result.tag = .equal_equal;
-                        self.index += 1;
-                    },
-                    '>' => {
-                        result.tag = .equal_bracket_right;
-                        self.index += 1;
-                    },
-                    else => result.tag = .equal,
-                }
-            },
-            .string_literal => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    0 => {
-                        if (self.index != self.buffer.len)
-                            continue :state .invalid;
-
-                        result.tag = .invalid;
-                    },
-                    '\n' => result.tag = .invalid,
-                    '"' => self.index += 1,
-                    0x01...0x09, 0x0b...0x1f, 0x7f => continue :state .invalid,
-                    else => continue :state .string_literal,
-                }
-            },
-            .expect_newline => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
+        while (true) : (self.index += 1) {
+            switch (state) {
+                .start => switch (self.buffer[self.index]) {
                     0 => {
                         if (self.index == self.buffer.len)
-                            result.tag = .invalid;
-
-                        continue :state .invalid;
+                            return .{ .tag = .eof, .location = .{
+                                .start = self.index,
+                                .end = self.index,
+                            } }
+                        else
+                            state = .invalid;
                     },
-                    '\n' => {
+                    ' ', '\n', '\r', '\t' => {
+                        result.location.start += 1;
+                    },
+                    '"' => {
+                        result.tag = .string_literal;
+                        state = .string_literal;
+                    },
+                    'a'...'z', 'A'...'Z', '_', '$' => {
+                        result.tag = .identifier;
+                        state = .identifier;
+                    },
+                    '0'...'9' => {
+                        result.tag = .number_literal;
+                        state = .int;
+                    },
+                    '=' => state = .equal,
+                    '*' => state = .asterisk,
+                    '/' => state = .slash,
+                    '-' => state = .minus,
+                    '+' => state = .plus,
+                    '&' => state = .ampersand,
+                    '|' => state = .pipe,
+                    '!' => state = .bang,
+                    '%' => state = .percent,
+                    '^' => state = .caret,
+                    '<' => state = .angle_bracket_left,
+                    '>' => state = .angle_bracket_right,
+                    ':' => state = .colon,
+                    '(' => {
+                        result.tag = .l_paren;
                         self.index += 1;
-                        result.location.start = self.index;
-                        continue :state .start;
+                        break;
                     },
-                    else => continue :state .invalid,
-                }
-            },
-            .identifier => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    'a'...'z', 'A'...'Z', '0'...'9', '_', '$' => continue :state .identifier,
-                    else => {
-                        if (Token.keyword.get(self.buffer[result.location.start..self.index])) |tag|
-                            result.tag = tag;
-
-                        if (Token.typesKeywordMap.get(self.buffer[result.location.start..self.index])) |tag|
-                            result.tag = tag;
-                    },
-                }
-            },
-            .angle_bracket_left => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '<' => continue :state .angle_bracket_left_angle_bracket_left,
-                    '=' => {
-                        result.tag = .angle_bracket_left_equal;
+                    ')' => {
+                        result.tag = .r_paren;
                         self.index += 1;
+                        break;
                     },
-                    else => result.tag = .angle_bracket_left,
-                }
-            },
-            .angle_bracket_left_angle_bracket_left => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '=' => {
-                        result.tag = .angle_bracket_left_angle_bracket_left_equal;
+                    '[' => {
+                        result.tag = .l_bracket;
                         self.index += 1;
+                        break;
                     },
-                    else => result.tag = .angle_bracket_left_angle_bracket_left,
-                }
-            },
-            .angle_bracket_right => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '>' => continue :state .angle_bracket_right_angle_bracket_right,
-                    '=' => {
-                        result.tag = .angle_bracket_right_equal;
+                    ']' => {
+                        result.tag = .r_bracket;
                         self.index += 1;
+                        break;
                     },
-                    else => result.tag = .angle_bracket_right,
-                }
-            },
-            .angle_bracket_right_angle_bracket_right => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '>' => continue :state .angle_bracket_right_angle_bracket_right_angle_bracket_right,
-                    '=' => {
-                        result.tag = .angle_bracket_right_angle_bracket_right_equal;
+                    '{' => {
+                        result.tag = .l_brace;
                         self.index += 1;
+                        break;
                     },
-                    else => result.tag = .angle_bracket_right_angle_bracket_right,
-                }
-            },
-            .angle_bracket_right_angle_bracket_right_angle_bracket_right => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '=' => {
-                        result.tag = .angle_bracket_right_angle_bracket_right_angle_bracket_right_equal;
+                    '}' => {
+                        result.tag = .r_brace;
                         self.index += 1;
+                        break;
                     },
-                    else => result.tag = .angle_bracket_right_angle_bracket_right_angle_bracket_right,
-                }
-            },
-            .int => switch (self.buffer[self.index]) {
-                'e', 'E' => continue :state .int_exponent,
-                'x' => continue :state .int_hex,
-                '0'...'9', '_' => {
-                    self.index += 1;
-                    continue :state .int;
+                    ';' => {
+                        result.tag = .semicolon;
+                        self.index += 1;
+                        break;
+                    },
+                    ',' => {
+                        result.tag = .comma;
+                        self.index += 1;
+                        break;
+                    },
+                    '?' => {
+                        result.tag = .question_mark;
+                        self.index += 1;
+                        break;
+                    },
+                    '.' => {
+                        result.tag = .period;
+                        self.index += 1;
+                        break;
+                    },
+                    '~' => {
+                        result.tag = .tilde;
+                        self.index += 1;
+                        break;
+                    },
+                    else => state = .invalid,
                 },
-                '.' => continue :state .int_period,
-                else => {},
-            },
-            .int_period => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '0'...'9', '_' => continue :state .float,
-                    else => self.index -= 1,
-                }
-            },
-            .int_exponent => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '0'...'9' => continue :state .int_exponent,
-                    else => {},
-                }
-            },
-            .int_hex => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    'a'...'f', 'A'...'F', '0'...'9', '_' => continue :state .int_hex,
-                    else => {},
-                }
-            },
-            .float => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '0'...'9', '_' => continue :state .float,
-                    else => {},
-                }
-            },
+                .invalid => {
+                    switch (self.buffer[self.index]) {
+                        0 => if (self.index == self.buffer.len) {
+                            result.tag = .invalid;
+                            break;
+                        },
+                        '\n' => {
+                            result.tag = .invalid;
+                            break;
+                        },
+                        else => continue,
+                    }
+                },
+                .colon => {
+                    switch (self.buffer[self.index]) {
+                        '=' => {
+                            result.tag = .colon_equal;
+                            self.index += 1;
+                        },
+                        else => {
+                            result.tag = .colon;
+                        },
+                    }
+
+                    break;
+                },
+                .ampersand => {
+                    switch (self.buffer[self.index]) {
+                        '=' => {
+                            result.tag = .ampersand_equal;
+                            self.index += 1;
+                        },
+                        '&' => {
+                            result.tag = .ampersand_ampersand;
+                            self.index += 1;
+                        },
+                        else => result.tag = .ampersand,
+                    }
+
+                    break;
+                },
+                .asterisk => {
+                    switch (self.buffer[self.index]) {
+                        '=' => {
+                            result.tag = .asterisk_equal;
+                            self.index += 1;
+                            break;
+                        },
+                        '/' => {
+                            result.tag = .doc_comment;
+                            state = .doc_comment;
+                        },
+                        '*' => {
+                            result.tag = .asterisk_asterisk;
+                            self.index += 1;
+                            break;
+                        },
+                        else => {
+                            result.tag = .asterisk;
+                            break;
+                        },
+                    }
+                },
+                .bang => {
+                    switch (self.buffer[self.index]) {
+                        '=' => {
+                            result.tag = .bang_equal;
+                            self.index += 1;
+                        },
+                        else => result.tag = .bang,
+                    }
+
+                    break;
+                },
+                .caret => {
+                    switch (self.buffer[self.index]) {
+                        '=' => {
+                            result.tag = .caret_equal;
+                            self.index += 1;
+                        },
+                        else => result.tag = .caret,
+                    }
+                    break;
+                },
+                .percent => {
+                    switch (self.buffer[self.index]) {
+                        '=' => {
+                            result.tag = .percent_equal;
+                            self.index += 1;
+                        },
+                        else => result.tag = .percent,
+                    }
+
+                    break;
+                },
+                .pipe => {
+                    switch (self.buffer[self.index]) {
+                        '|' => {
+                            result.tag = .pipe_pipe;
+                            self.index += 1;
+                        },
+                        '=' => {
+                            result.tag = .pipe_equal;
+                            self.index += 1;
+                        },
+                        else => result.tag = .pipe,
+                    }
+
+                    break;
+                },
+                .minus => {
+                    switch (self.buffer[self.index]) {
+                        '-' => {
+                            result.tag = .minus_minus;
+                            self.index += 1;
+                        },
+                        '=' => {
+                            result.tag = .minus_equal;
+                            self.index += 1;
+                        },
+                        '>' => {
+                            result.tag = .arrow;
+                            self.index += 1;
+                        },
+                        else => result.tag = .minus,
+                    }
+                    break;
+                },
+                .plus => {
+                    switch (self.buffer[self.index]) {
+                        '+' => {
+                            result.tag = .plus_plus;
+                            self.index += 1;
+                        },
+                        '=' => {
+                            result.tag = .plus_equal;
+                            self.index += 1;
+                        },
+                        else => result.tag = .plus,
+                    }
+
+                    break;
+                },
+                .slash => {
+                    switch (self.buffer[self.index]) {
+                        '=' => {
+                            result.tag = .slash_equal;
+                            self.index += 1;
+                            break;
+                        },
+                        '/' => state = .line_comment_start,
+                        '*' => state = .doc_comment_container_start,
+                        else => {
+                            result.tag = .slash;
+                            break;
+                        },
+                    }
+                },
+                .line_comment_start => {
+                    switch (self.buffer[self.index]) {
+                        '\r' => state = .expect_newline,
+                        '\n' => {
+                            result.location.start = self.index + 1;
+                            state = .start;
+                        },
+                        0x01...0x09, 0x0b...0x0c, 0x0e...0x1f, 0x7f => state = .invalid,
+                        '/' => state = .doc_comment_start,
+                        else => state = .line_comment,
+                    }
+                },
+                .line_comment => {
+                    switch (self.buffer[self.index]) {
+                        0 => {
+                            if (self.index != self.buffer.len) {
+                                state = .invalid;
+                                continue;
+                            }
+
+                            return .{
+                                .tag = .eof,
+                                .location = .{
+                                    .start = self.index,
+                                    .end = self.index,
+                                },
+                            };
+                        },
+                        '\r' => state = .expect_newline,
+                        '\n' => {
+                            result.location.start = self.index;
+                            state = .start;
+                        },
+                        0x01...0x09, 0x0b...0x0c, 0x0e...0x1f, 0x7f => state = .invalid,
+                        else => continue,
+                    }
+                },
+                .doc_comment_container_start => {
+                    switch (self.buffer[self.index]) {
+                        0 => {
+                            result.tag = .doc_comment_container;
+                            break;
+                        },
+                        0x01...0x09, 0x0b...0x0c, 0x0e...0x1f, 0x7f => state = .invalid,
+                        else => {
+                            result.tag = .doc_comment_container;
+                            state = .doc_comment_container;
+                        },
+                    }
+                },
+                .doc_comment_start => {
+                    switch (self.buffer[self.index]) {
+                        0, '\n' => {
+                            result.tag = .doc_comment;
+                            break;
+                        },
+                        '\r' => {
+                            if (self.buffer[self.index + 1] == '\n') {
+                                result.tag = .doc_comment;
+                                break;
+                            } else {
+                                state = .invalid;
+                            }
+                        },
+                        '/' => state = .line_comment,
+                        0x01...0x09, 0x0b...0x0c, 0x0e...0x1f, 0x7f => {
+                            state = .invalid;
+                        },
+                        else => {
+                            result.tag = .doc_comment;
+                            state = .doc_comment;
+                        },
+                    }
+                },
+                .doc_comment_container => {
+                    switch (self.buffer[self.index]) {
+                        0 => {
+                            result.tag = .doc_comment_container;
+                            break;
+                        },
+                        '*' => {
+                            if (self.buffer[self.index + 1] == '/') {
+                                self.index += 2;
+                                break;
+                            } else continue;
+                        },
+                        0x01...0x09, 0x0b...0x0c, 0x0e...0x1f, 0x7f => state = .invalid,
+                        else => continue,
+                    }
+                },
+                .doc_comment => {
+                    switch (self.buffer[self.index]) {
+                        0, '\n' => break,
+                        '\r' => if (self.buffer[self.index + 1] != '\n') {
+                            state = .invalid;
+                        },
+                        0x01...0x09, 0x0b...0x0c, 0x0e...0x1f, 0x7f => {
+                            state = .invalid;
+                        },
+                        else => continue,
+                    }
+                },
+                .equal => {
+                    switch (self.buffer[self.index]) {
+                        '=' => {
+                            result.tag = .equal_equal;
+                            self.index += 1;
+                        },
+                        '>' => {
+                            result.tag = .equal_bracket_right;
+                            self.index += 1;
+                        },
+                        else => result.tag = .equal,
+                    }
+
+                    break;
+                },
+                .string_literal => {
+                    switch (self.buffer[self.index]) {
+                        0 => {
+                            if (self.index != self.buffer.len) {
+                                state = .invalid;
+                                continue;
+                            }
+
+                            result.tag = .invalid;
+                            break;
+                        },
+                        '\n' => {
+                            result.tag = .invalid;
+                            break;
+                        },
+                        '"' => {
+                            self.index += 1;
+                            break;
+                        },
+                        0x01...0x09, 0x0b...0x1f, 0x7f => state = .invalid,
+                        else => continue,
+                    }
+                },
+                .expect_newline => {
+                    switch (self.buffer[self.index]) {
+                        0 => {
+                            if (self.index == self.buffer.len) {
+                                result.tag = .invalid;
+                                break;
+                            }
+
+                            state = .invalid;
+                        },
+                        '\n' => {
+                            result.location.start = self.index + 1;
+                            state = .start;
+                        },
+                        else => state = .invalid,
+                    }
+                },
+                .identifier => {
+                    switch (self.buffer[self.index]) {
+                        'a'...'z', 'A'...'Z', '0'...'9', '_', '$' => continue,
+                        else => {
+                            if (Token.keyword.get(self.buffer[result.location.start..self.index])) |tag|
+                                result.tag = tag;
+
+                            if (Token.typesKeywordMap.get(self.buffer[result.location.start..self.index])) |tag|
+                                result.tag = tag;
+
+                            break;
+                        },
+                    }
+                },
+                .angle_bracket_left => {
+                    switch (self.buffer[self.index]) {
+                        '<' => state = .angle_bracket_left_angle_bracket_left,
+                        '=' => {
+                            result.tag = .angle_bracket_left_equal;
+                            self.index += 1;
+                            break;
+                        },
+                        else => {
+                            result.tag = .angle_bracket_left;
+                            break;
+                        },
+                    }
+                },
+                .angle_bracket_left_angle_bracket_left => {
+                    switch (self.buffer[self.index]) {
+                        '=' => {
+                            result.tag = .angle_bracket_left_angle_bracket_left_equal;
+                            self.index += 1;
+                        },
+                        else => result.tag = .angle_bracket_left_angle_bracket_left,
+                    }
+
+                    break;
+                },
+                .angle_bracket_right => {
+                    switch (self.buffer[self.index]) {
+                        '>' => state = .angle_bracket_right_angle_bracket_right,
+                        '=' => {
+                            result.tag = .angle_bracket_right_equal;
+                            self.index += 1;
+                            break;
+                        },
+                        else => {
+                            result.tag = .angle_bracket_right;
+                            break;
+                        },
+                    }
+                },
+                .angle_bracket_right_angle_bracket_right => {
+                    switch (self.buffer[self.index]) {
+                        '>' => state = .angle_bracket_right_angle_bracket_right_angle_bracket_right,
+                        '=' => {
+                            result.tag = .angle_bracket_right_angle_bracket_right_equal;
+                            self.index += 1;
+                            break;
+                        },
+                        else => {
+                            result.tag = .angle_bracket_right_angle_bracket_right;
+                            break;
+                        },
+                    }
+                },
+                .angle_bracket_right_angle_bracket_right_angle_bracket_right => {
+                    switch (self.buffer[self.index]) {
+                        '=' => {
+                            result.tag = .angle_bracket_right_angle_bracket_right_angle_bracket_right_equal;
+                            self.index += 1;
+                        },
+                        else => result.tag = .angle_bracket_right_angle_bracket_right_angle_bracket_right,
+                    }
+
+                    break;
+                },
+                .int => switch (self.buffer[self.index]) {
+                    'e', 'E' => state = .int_exponent,
+                    'x' => state = .int_hex,
+                    '0'...'9', '_' => {
+                        state = .int;
+                    },
+                    '.' => state = .int_period,
+                    else => break,
+                },
+                .int_period => {
+                    switch (self.buffer[self.index]) {
+                        '0'...'9', '_' => continue,
+                        else => break,
+                    }
+                },
+                .int_exponent => {
+                    switch (self.buffer[self.index]) {
+                        '0'...'9' => continue,
+                        else => break,
+                    }
+                },
+                .int_hex => {
+                    switch (self.buffer[self.index]) {
+                        'a'...'f', 'A'...'F', '0'...'9', '_' => continue,
+                        else => break,
+                    }
+                },
+                .float => {
+                    switch (self.buffer[self.index]) {
+                        '0'...'9', '_' => continue,
+                        else => break,
+                    }
+                },
+            }
         }
 
         result.location.end = self.index;

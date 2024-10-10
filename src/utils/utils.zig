@@ -16,14 +16,14 @@ pub inline fn isStaticType(comptime T: type) bool {
     const info = @typeInfo(T);
 
     switch (info) {
-        .bool, .int, .null => return true,
-        .array => return false,
-        .@"struct" => inline for (info.@"struct".fields) |field| {
+        .Bool, .Int, .Null => return true,
+        .Array => return false,
+        .Struct => inline for (info.Struct.fields) |field| {
             if (!isStaticType(field.type)) {
                 return false;
             }
         },
-        .pointer => switch (info.pointer.size) {
+        .Pointer => switch (info.Pointer.size) {
             .Many, .Slice, .C => return false,
             .One => return isStaticType(info.Pointer.child),
         },
@@ -37,10 +37,10 @@ pub inline fn isDynamicType(comptime T: type) bool {
     const info = @typeInfo(T);
 
     switch (info) {
-        .bool, .int, .null => return false,
-        .array => |arr_info| return isDynamicType(arr_info.child),
-        .@"struct" => {
-            inline for (info.@"struct".fields) |field| {
+        .Bool, .Int, .Null => return false,
+        .Array => |arr_info| return isDynamicType(arr_info.child),
+        .Struct => {
+            inline for (info.Struct.fields) |field| {
                 const dynamic = isDynamicType(field.type);
 
                 if (dynamic)
@@ -49,7 +49,7 @@ pub inline fn isDynamicType(comptime T: type) bool {
 
             return false;
         },
-        .pointer => switch (info.pointer.size) {
+        .Pointer => switch (info.Pointer.size) {
             .Many, .Slice, .C => return true,
             .One => return isStaticType(info.Pointer.child),
         },
@@ -214,7 +214,7 @@ pub inline fn computeSize(int: u256) u8 {
 /// hex represented string.
 pub fn bytesToInt(comptime T: type, slice: []u8) error{Overflow}!T {
     const info = @typeInfo(T);
-    const IntType = std.meta.Int(info.int.signedness, @max(8, info.int.bits));
+    const IntType = std.meta.Int(info.Int.signedness, @max(8, info.Int.bits));
     var x: IntType = 0;
 
     for (slice, 0..) |bit, i| {

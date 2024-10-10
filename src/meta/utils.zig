@@ -6,12 +6,12 @@ const assert = std.debug.assert;
 /// Convert the struct fields into to a enum.
 pub fn ConvertToEnum(comptime T: type) type {
     const info = @typeInfo(T);
-    assert(info == .@"struct");
+    assert(info == .Struct);
 
-    var enum_fields: [info.@"struct".fields.len]std.builtin.Type.EnumField = undefined;
+    var enum_fields: [info.Struct.fields.len]std.builtin.Type.EnumField = undefined;
 
     var count = 0;
-    for (&enum_fields, info.@"struct".fields) |*enum_field, struct_field| {
+    for (&enum_fields, info.Struct.fields) |*enum_field, struct_field| {
         enum_field.* = .{
             .name = struct_field.name ++ "",
             .value = count,
@@ -19,7 +19,7 @@ pub fn ConvertToEnum(comptime T: type) type {
         count += 1;
     }
 
-    return @Type(.{ .@"enum" = .{
+    return @Type(.{ .Enum = .{
         .tag_type = usize,
         .fields = &enum_fields,
         .decls = &.{},
@@ -32,10 +32,10 @@ pub fn ConvertToEnum(comptime T: type) type {
 ///
 /// Compilation will fail if a invalid needle is provided.
 pub fn Extract(comptime T: type, comptime needle: []const u8) type {
-    if (std.meta.activeTag(@typeInfo(T)) != .@"enum")
+    if (std.meta.activeTag(@typeInfo(T)) != .Enum)
         @compileError("Only supported for enum types");
 
-    const info = @typeInfo(T).@"enum";
+    const info = @typeInfo(T).Enum;
     var counter: usize = 0;
 
     var iter = std.mem.tokenizeSequence(u8, needle, ",");
@@ -63,7 +63,7 @@ pub fn Extract(comptime T: type, comptime needle: []const u8) type {
         }
     }
 
-    return @Type(.{ .@"enum" = .{
+    return @Type(.{ .Enum = .{
         .tag_type = info.tag_type,
         .fields = &enumFields,
         .decls = &.{},
@@ -75,47 +75,47 @@ pub fn MergeStructs(comptime T: type, comptime K: type) type {
     const info_t = @typeInfo(T);
     const info_k = @typeInfo(K);
 
-    if (info_t != .@"struct" or info_k != .@"struct")
+    if (info_t != .Struct or info_k != .Struct)
         @compileError("Expected struct type");
 
-    if (info_t.@"struct".is_tuple or info_k.@"struct".is_tuple)
+    if (info_t.Struct.is_tuple or info_k.Struct.is_tuple)
         @compileError("Use `MergeTupleStructs` instead");
 
     var counter: usize = 0;
-    var fields: [info_t.@"struct".fields.len + info_k.@"struct".fields.len]std.builtin.Type.StructField = undefined;
+    var fields: [info_t.Struct.fields.len + info_k.Struct.fields.len]std.builtin.Type.StructField = undefined;
 
-    for (info_t.@"struct".fields) |field| {
+    for (info_t.Struct.fields) |field| {
         fields[counter] = field;
         counter += 1;
     }
 
-    for (info_k.@"struct".fields) |field| {
+    for (info_k.Struct.fields) |field| {
         fields[counter] = field;
         counter += 1;
     }
 
-    return @Type(.{ .@"struct" = .{ .layout = .auto, .fields = &fields, .decls = &.{}, .is_tuple = false } });
+    return @Type(.{ .Struct = .{ .layout = .auto, .fields = &fields, .decls = &.{}, .is_tuple = false } });
 }
 /// Merge tuple structs
 pub fn MergeTupleStructs(comptime T: type, comptime K: type) type {
     const info_t = @typeInfo(T);
     const info_k = @typeInfo(K);
 
-    if (info_t != .@"struct" or info_k != .@"struct")
+    if (info_t != .Struct or info_k != .Struct)
         @compileError("Expected struct type");
 
-    if (!info_t.@"struct".is_tuple or !info_k.@"struct".is_tuple)
+    if (!info_t.Struct.is_tuple or !info_k.Struct.is_tuple)
         @compileError("Use `MergeStructs` instead");
 
     var counter: usize = 0;
-    var fields: [info_t.@"struct".fields.len + info_k.@"struct".fields.len]std.builtin.Type.StructField = undefined;
+    var fields: [info_t.Struct.fields.len + info_k.Struct.fields.len]std.builtin.Type.StructField = undefined;
 
-    for (info_t.@"struct".fields) |field| {
+    for (info_t.Struct.fields) |field| {
         fields[counter] = field;
         counter += 1;
     }
 
-    for (info_k.@"struct".fields) |field| {
+    for (info_k.Struct.fields) |field| {
         fields[counter] = .{
             .name = std.fmt.comptimePrint("{d}", .{counter}),
             .type = field.type,
@@ -126,7 +126,7 @@ pub fn MergeTupleStructs(comptime T: type, comptime K: type) type {
         counter += 1;
     }
 
-    return @Type(.{ .@"struct" = .{
+    return @Type(.{ .Struct = .{
         .layout = .auto,
         .fields = &fields,
         .decls = &.{},
@@ -137,16 +137,16 @@ pub fn MergeTupleStructs(comptime T: type, comptime K: type) type {
 pub fn StructToTupleType(comptime T: type) type {
     const info = @typeInfo(T);
 
-    if (info != .@"struct" and info.@"struct".is_tuple)
+    if (info != .Struct and info.Struct.is_tuple)
         @compileError("Expected non tuple struct type but found " ++ @typeName(T));
 
-    var fields: [info.@"struct".fields.len]std.builtin.Type.StructField = undefined;
+    var fields: [info.Struct.fields.len]std.builtin.Type.StructField = undefined;
 
-    inline for (info.@"struct".fields, 0..) |field, i| {
+    inline for (info.Struct.fields, 0..) |field, i| {
         const field_info = @typeInfo(field.type);
 
         switch (field_info) {
-            .@"struct" => {
+            .Struct => {
                 const Type = StructToTupleType(field.type);
                 fields[i] = .{
                     .name = std.fmt.comptimePrint("{d}", .{i}),
@@ -156,10 +156,10 @@ pub fn StructToTupleType(comptime T: type) type {
                     .alignment = if (@sizeOf(Type) > 0) @alignOf(Type) else 0,
                 };
             },
-            .array => |arr_info| {
+            .Array => |arr_info| {
                 const arr_type_info = @typeInfo(arr_info.child);
 
-                if (arr_type_info == .@"struct") {
+                if (arr_type_info == .Struct) {
                     const Type = StructToTupleType(arr_info.child);
                     fields[i] = .{
                         .name = std.fmt.comptimePrint("{d}", .{i}),
@@ -179,10 +179,10 @@ pub fn StructToTupleType(comptime T: type) type {
                     .alignment = field.alignment,
                 };
             },
-            .pointer => |ptr_info| {
+            .Pointer => |ptr_info| {
                 const ptr_type_info = @typeInfo(ptr_info.child);
 
-                if (ptr_type_info == .@"struct") {
+                if (ptr_type_info == .Struct) {
                     const Type = StructToTupleType(ptr_info.child);
                     fields[i] = .{
                         .name = std.fmt.comptimePrint("{d}", .{i}),
@@ -214,7 +214,7 @@ pub fn StructToTupleType(comptime T: type) type {
         }
     }
 
-    return @Type(.{ .@"struct" = .{
+    return @Type(.{ .Struct = .{
         .layout = .auto,
         .fields = &fields,
         .decls = &.{},
@@ -225,18 +225,18 @@ pub fn StructToTupleType(comptime T: type) type {
 pub fn Omit(comptime T: type, comptime keys: []const []const u8) type {
     const info = @typeInfo(T);
 
-    if (info != .@"struct" and info.@"struct".is_tuple)
+    if (info != .Struct and info.Struct.is_tuple)
         @compileError("Expected non tuple struct type but found " ++ @typeName(T));
 
-    if (keys.len >= info.@"struct".fields.len)
+    if (keys.len >= info.Struct.fields.len)
         @compileError("Key length exceeds struct field length");
 
-    const size = info.@"struct".fields.len - keys.len;
+    const size = info.Struct.fields.len - keys.len;
     var fields: [size]std.builtin.Type.StructField = undefined;
     var fields_seen = [_]bool{false} ** size;
 
     var counter: usize = 0;
-    outer: inline for (info.@"struct".fields) |field| {
+    outer: inline for (info.Struct.fields) |field| {
         for (keys) |key| {
             if (std.mem.eql(u8, key, field.name)) {
                 continue :outer;
@@ -247,7 +247,7 @@ pub fn Omit(comptime T: type, comptime keys: []const []const u8) type {
         counter += 1;
     }
 
-    return @Type(.{ .@"struct" = .{
+    return @Type(.{ .Struct = .{
         .layout = .auto,
         .fields = &fields,
         .decls = &.{},

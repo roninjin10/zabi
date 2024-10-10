@@ -179,13 +179,13 @@ pub const AnvilStartOptions = struct {
             const info = @typeInfo(field.type);
 
             switch (info) {
-                .bool => {
+                .Bool => {
                     if (@field(self, field.name)) {
                         const argument = "--" ++ field.name;
                         try list.append(argument);
                     }
                 },
-                .optional => {
+                .Optional => {
                     if (@field(self, field.name)) |value| {
                         const value_info = @typeInfo(@TypeOf(value));
 
@@ -204,9 +204,9 @@ pub const AnvilStartOptions = struct {
                         // Adds the arguments associated value.
                         {
                             switch (value_info) {
-                                .int => try buf_writer.writer().print("{d}", .{value}),
-                                .pointer => try buf_writer.writer().print("{s}", .{value}),
-                                .@"enum" => try buf_writer.writer().print("{s}", .{@tagName(value)}),
+                                .Int => try buf_writer.writer().print("{d}", .{value}),
+                                .Pointer => try buf_writer.writer().print("{s}", .{value}),
+                                .Enum => try buf_writer.writer().print("{s}", .{@tagName(value)}),
                                 else => @compileError("Unsupported type '" ++ @typeName(@TypeOf(value)) ++ "'"),
                             }
 

@@ -144,20 +144,19 @@ const protocol_map = std.StaticStringMap(std.http.Client.Connection.Protocol).in
 /// This will get run everytime a socket message is found.
 /// All messages are parsed and put into the handlers channel.
 /// All callbacks will only affect this function.
-pub fn serverMessage(
+pub fn handle(
     self: *WebSocketHandler,
-    message: []u8,
-    message_type: ws.MessageTextType,
+    message: ws.Message,
 ) (Stack(JsonParsed(Value)).Error || error{ FailedToJsonParseResponse, InvalidTypeMessage, UnexpectedError })!void {
     self.mutex.lock();
     defer self.mutex.unlock();
 
-    wslog.debug("Got message: {s}", .{message});
-    switch (message_type) {
+    wslog.debug("Got message: {s}", .{message.data});
+    switch (message.type) {
         .text => {
-            const parsed = self.parseRPCEvent(message) catch {
+            const parsed = self.parseRPCEvent(message.data) catch {
                 if (self.onError) |onError| {
-                    onError(message) catch return error.UnexpectedError;
+                    onError(message.data) catch return error.UnexpectedError;
                 }
 
                 return error.FailedToJsonParseResponse;
@@ -269,10 +268,8 @@ pub fn connect(self: *WebSocketHandler) ConnectionErrors!ws.Client {
             .percent_encoded => |host| host,
         };
 
-        var client = ws.Client.init(self.allocator, .{
+        var client = ws.connect(self.allocator, hostname, port, .{
             .tls = scheme == .tls,
-            .port = port,
-            .host = hostname,
             .max_size = std.math.maxInt(u32),
             .buffer_size = 10 * std.math.maxInt(u16),
         }) catch |err| {

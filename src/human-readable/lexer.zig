@@ -42,108 +42,114 @@ pub const Lexer = struct {
     }
 
     pub fn scan(self: *Lexer) Token {
-        var result = Token{
-            .syntax = undefined,
-            .location = .{
-                .start = self.position,
-                .end = undefined,
-            },
-        };
+        var result = Token{ .syntax = undefined, .location = .{
+            .start = self.position,
+            .end = undefined,
+        } };
 
-        state: switch (State.start) {
-            .start => switch (self.currentText[self.position]) {
-                0 => {
-                    if (self.position == self.currentText.len)
-                        return .{
-                            .syntax = .EndOfFileToken,
-                            .location = .{
-                                .start = self.position,
-                                .end = self.position,
-                            },
-                        }
-                    else
-                        continue :state .invalid;
-                },
-                ' ', '\t', '\r', '\n' => {
-                    result.location.start += 1;
-                    self.position += 1;
-                    continue :state .start;
-                },
-                ';' => {
-                    result.syntax = .SemiColon;
-                    self.position += 1;
-                },
-                ',' => {
-                    result.syntax = .Comma;
-                    self.position += 1;
-                },
-                '(' => {
-                    result.syntax = .OpenParen;
-                    self.position += 1;
-                },
-                ')' => {
-                    result.syntax = .ClosingParen;
-                    self.position += 1;
-                },
-                '{' => {
-                    result.syntax = .OpenBrace;
-                    self.position += 1;
-                },
-                '}' => {
-                    result.syntax = .ClosingBrace;
-                    self.position += 1;
-                },
-                '[' => {
-                    result.syntax = .OpenBracket;
-                    self.position += 1;
-                },
-                ']' => {
-                    result.syntax = .ClosingBracket;
-                    self.position += 1;
-                },
-                'a'...'z', 'A'...'Z', '_', '$' => {
-                    result.syntax = .Identifier;
-                    continue :state .identifier;
-                },
-                '0'...'9' => {
-                    result.syntax = .Number;
-                    continue :state .number;
-                },
-                else => continue :state .invalid,
-            },
-            .invalid => {
-                self.position += 1;
-                switch (self.currentText[self.position]) {
-                    0 => if (self.position == self.currentText.len) {
-                        result.syntax = .UnknowToken;
+        var state: State = .start;
+
+        while (true) : (self.position += 1) {
+            const char = self.currentText[self.position];
+
+            switch (state) {
+                .start => switch (char) {
+                    0 => {
+                        if (self.position == self.currentText.len) {
+                            result.syntax = .EndOfFileToken;
+                            result.location.start = self.position;
+                            result.location.end = self.position;
+
+                            return result;
+                        } else state = .invalid;
                     },
-                    '\n' => result.syntax = .UnknowToken,
-                    else => continue :state .invalid,
-                }
-            },
-            .identifier => {
-                self.position += 1;
-                switch (self.currentText[self.position]) {
-                    'a'...'z', 'A'...'Z', '_', '$', '0'...'9' => continue :state .identifier,
+                    ' ', '\t', '\r', '\n' => {
+                        result.location.start += 1;
+                    },
+                    ';' => {
+                        result.syntax = .SemiColon;
+                        self.position += 1;
+                        break;
+                    },
+                    ',' => {
+                        result.syntax = .Comma;
+                        self.position += 1;
+                        break;
+                    },
+                    '(' => {
+                        result.syntax = .OpenParen;
+                        self.position += 1;
+                        break;
+                    },
+                    ')' => {
+                        result.syntax = .ClosingParen;
+                        self.position += 1;
+                        break;
+                    },
+                    '{' => {
+                        result.syntax = .OpenBrace;
+                        self.position += 1;
+                        break;
+                    },
+                    '}' => {
+                        result.syntax = .ClosingBrace;
+                        self.position += 1;
+                        break;
+                    },
+                    '[' => {
+                        result.syntax = .OpenBracket;
+                        self.position += 1;
+                        break;
+                    },
+                    ']' => {
+                        result.syntax = .ClosingBracket;
+                        self.position += 1;
+                        break;
+                    },
+                    'a'...'z', 'A'...'Z', '_', '$' => {
+                        state = .identifier;
+                        result.syntax = .Identifier;
+                    },
+                    '0'...'9' => {
+                        state = .number;
+                        result.syntax = .Number;
+                    },
+                    else => state = .invalid,
+                },
+
+                .invalid => {
+                    switch (self.currentText[self.position]) {
+                        0 => if (self.position == self.currentText.len) {
+                            result.syntax = .UnknowToken;
+                            break;
+                        },
+                        '\n' => {
+                            result.syntax = .UnknowToken;
+                            break;
+                        },
+                        else => continue,
+                    }
+                },
+
+                .identifier => switch (char) {
+                    'a'...'z', 'A'...'Z', '_', '$', '0'...'9' => {},
                     else => {
                         if (Token.keywords(self.currentText[result.location.start..self.position])) |syntax| {
                             result.syntax = syntax;
                         }
-
                         if (Token.typesKeyword(self.currentText[result.location.start..self.position])) |syntax| {
                             result.syntax = syntax;
                         }
-                    },
-                }
-            },
 
-            .number => {
-                self.position += 1;
-                switch (self.currentText[self.position]) {
-                    '0'...'9' => continue :state .number,
-                    else => {},
-                }
-            },
+                        break;
+                    },
+                },
+
+                .number => switch (char) {
+                    '0'...'9' => {},
+                    else => break,
+                },
+            }
         }
 
         result.location.end = self.position;

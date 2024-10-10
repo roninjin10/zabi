@@ -29,8 +29,8 @@ pub fn encodeRlp(allocator: Allocator, payload: anytype) RlpEncodeErrors![]u8 {
     var writer = list.writer();
 
     switch (info) {
-        .bool => if (payload) try writer.writeByte(0x01) else try writer.writeByte(0x80),
-        .int => {
+        .Bool => if (payload) try writer.writeByte(0x01) else try writer.writeByte(0x80),
+        .Int => {
             if (payload < 0) return error.NegativeNumber;
 
             if (payload == 0) try writer.writeByte(0x80) else if (payload < 0x80) try writer.writeByte(@intCast(payload)) else {
@@ -40,7 +40,7 @@ pub fn encodeRlp(allocator: Allocator, payload: anytype) RlpEncodeErrors![]u8 {
                 try writer.writeAll(buffer[32 - size_slice ..]);
             }
         },
-        .comptime_int => {
+        .ComptimeInt => {
             if (payload < 0) return error.NegativeNumber;
 
             if (payload == 0) try writer.writeByte(0x80) else if (payload < 0x80) try writer.writeByte(@intCast(payload)) else {
@@ -48,13 +48,13 @@ pub fn encodeRlp(allocator: Allocator, payload: anytype) RlpEncodeErrors![]u8 {
                 return encodeRlp(allocator, @as(IntType, @intCast(payload)));
             }
         },
-        .float => |float_info| {
+        .Float => |float_info| {
             if (payload < 0)
                 return error.NegativeNumber;
 
             if (payload == 0) try writer.writeByte(0x80) else if (payload < 0x80) try writer.writeByte(@intFromFloat(payload)) else {
                 const bits = float_info.bits;
-                const IntType = @Type(.{ .int = .{ .signedness = .unsigned, .bits = bits } });
+                const IntType = @Type(.{ .Int = .{ .signedness = .unsigned, .bits = bits } });
                 const as_int = @as(IntType, @bitCast(payload));
                 var buffer: [32]u8 = undefined;
                 const size_slice = utils.formatInt(as_int, &buffer);
@@ -62,7 +62,7 @@ pub fn encodeRlp(allocator: Allocator, payload: anytype) RlpEncodeErrors![]u8 {
                 try writer.writeAll(buffer[32 - size_slice ..]);
             }
         },
-        .comptime_float => {
+        .ComptimeFloat => {
             if (payload < 0) return error.NegativeNumber;
 
             if (payload == 0) try writer.writeByte(0x80) else if (payload < 0x80) try writer.writeByte(@intFromFloat(payload)) else {
@@ -76,13 +76,13 @@ pub fn encodeRlp(allocator: Allocator, payload: anytype) RlpEncodeErrors![]u8 {
                 try writer.writeAll(buffer[32 - size_slice ..]);
             }
         },
-        .null => try writer.writeByte(0x80),
-        .optional => {
+        .Null => try writer.writeByte(0x80),
+        .Optional => {
             if (payload) |item| return encodeRlp(allocator, item) else try writer.writeByte(0x80);
         },
-        .@"enum", .enum_literal => return encodeRlp(allocator, @tagName(payload)),
-        .error_set => return encodeRlp(allocator, @errorName(payload)),
-        .array => |arr_info| {
+        .Enum, .EnumLiteral => return encodeRlp(allocator, @tagName(payload)),
+        .ErrorSet => return encodeRlp(allocator, @errorName(payload)),
+        .Array => |arr_info| {
             if (arr_info.child == u8) {
                 if (payload.len == 0) try writer.writeByte(0x80) else if (payload.len < 56) {
                     try writer.writeByte(@intCast(0x80 + payload.len));
@@ -130,7 +130,7 @@ pub fn encodeRlp(allocator: Allocator, payload: anytype) RlpEncodeErrors![]u8 {
                 }
             }
         },
-        .pointer => |ptr_info| {
+        .Pointer => |ptr_info| {
             switch (ptr_info.size) {
                 .One => return encodeRlp(allocator, payload.*),
                 .Slice, .Many => {
@@ -183,7 +183,7 @@ pub fn encodeRlp(allocator: Allocator, payload: anytype) RlpEncodeErrors![]u8 {
                 else => @compileError("Unable to parse pointer type " ++ @typeName(@TypeOf(payload))),
             }
         },
-        .@"struct" => |struct_info| {
+        .Struct => |struct_info| {
             if (struct_info.is_tuple) {
                 if (payload.len == 0) try writer.writeByte(0xc0) else {
                     var tuple = std.ArrayList(u8).init(allocator);
@@ -223,7 +223,7 @@ pub fn encodeRlp(allocator: Allocator, payload: anytype) RlpEncodeErrors![]u8 {
                 }
             }
         },
-        .@"union" => |union_info| {
+        .Union => |union_info| {
             if (union_info.tag_type) |TagType| {
                 inline for (union_info.fields) |u_field| {
                     if (payload == @field(TagType, u_field.name)) {
@@ -247,7 +247,7 @@ pub fn encodeRlp(allocator: Allocator, payload: anytype) RlpEncodeErrors![]u8 {
                 try writer.writeAll(slice);
             }
         },
-        .vector => |vec_info| {
+        .Vector => |vec_info| {
             if (vec_info.len == 0) try writer.writeByte(0xc0) else {
                 var slice = std.ArrayList(u8).init(allocator);
                 errdefer slice.deinit();
